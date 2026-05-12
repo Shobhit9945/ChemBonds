@@ -9,11 +9,28 @@ body,
   margin: 0;
 }
 
+/* Use dynamic viewport units on mobile to handle browser chrome (URL bar) collapse. */
+@supports (height: 100dvh) {
+  html,
+  body,
+  #root {
+    height: 100dvh;
+  }
+}
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   background: #0d1117;
   color: #e6edf3;
+  /* prevent rubber-band scrolling and double-tap zoom on iOS */
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* Allow horizontal-scroll regions (element-chip rows) to swipe naturally. */
+.snap-x {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* hide focus rings everywhere except keyboard navigation */

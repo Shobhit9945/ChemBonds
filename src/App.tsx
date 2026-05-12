@@ -6,8 +6,10 @@ import { GestureGuide } from './ui/GestureGuide';
 import { VideoFeed } from './ui/VideoFeed';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { MoleculeScene } from './scene/MoleculeScene';
+import { MobileLayout } from './ui/mobile/MobileLayout';
 import { useHandTracking } from './tracking/useHandTracking';
 import { useMoleculeStore } from './store/moleculeStore';
+import { useIsMobile } from './hooks/useMediaQuery';
 import { ELEMENT_ORDER } from './chemistry/elements.data';
 
 export default function App() {
@@ -15,10 +17,15 @@ export default function App() {
   const reset = useMoleculeStore((s) => s.reset);
   const setSelectedElement = useMoleculeStore((s) => s.setSelectedElement);
   const setAllFingers = useMoleculeStore((s) => s.setAllFingers);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // 1-9 → element select (C H O N F Cl Br P S)
+      const target = e.target as HTMLElement | null;
+      // Don't capture keys while user is typing in an input.
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
       const idx = Number(e.key) - 1;
       if (idx >= 0 && idx < ELEMENT_ORDER.length) {
         const el = ELEMENT_ORDER[idx];
@@ -30,6 +37,17 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [reset, setSelectedElement, setAllFingers]);
+
+  if (isMobile) {
+    return (
+      <MobileLayout
+        handsRef={handsRef}
+        status={status}
+        startTracking={startTracking}
+        videoRef={videoRef}
+      />
+    );
+  }
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -47,7 +65,8 @@ export default function App() {
 
       <footer className="relative z-10 border-t border-white/10 bg-[#0D1117]/90 backdrop-blur-sm">
         <p className="py-2 text-center text-xs tracking-[0.18em] text-cyan-100/80">
-          Made by <span className="font-medium text-cyan-200">Shobhit</span> <span aria-hidden="true">:)</span>
+          Made by <span className="font-medium text-cyan-200">Shobhit</span>{' '}
+          <span aria-hidden="true">:)</span>
         </p>
       </footer>
 
