@@ -45,6 +45,12 @@ export default function App() {
       </div>
       <GestureGuide />
 
+      <footer className="relative z-10 border-t border-white/10 bg-[#0D1117]/90 backdrop-blur-sm">
+        <p className="py-2 text-center text-xs tracking-[0.18em] text-cyan-100/80">
+          Made by <span className="font-medium text-cyan-200">Shobhit</span> <span aria-hidden="true">:)</span>
+        </p>
+      </footer>
+
       {/* Screen-reader live summary */}
       <div className="sr-only" aria-live="polite" id="a11y-summary" />
     </div>

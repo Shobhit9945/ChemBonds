@@ -30,10 +30,13 @@ export function useHandTracking(): HandTrackingState {
   const [status, setStatus] = useState<HandTrackingState['status']>('idle');
 
   const startTracking = async () => {
+    if (status === 'requesting' || status === 'tracking') return;
     if (!videoRef.current) {
       setStatus('error');
       return;
     }
+    trackerRef.current?.stop();
+    trackerRef.current = null;
     setStatus('requesting');
     try {
       const tracker = new HandTracker(videoRef.current);

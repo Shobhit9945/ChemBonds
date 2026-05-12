@@ -43,11 +43,13 @@ function MoleculeEngine({ handsRef }: Props) {
     const { bondThreshold, enforceValence } = settingsStore();
 
     // 1) Update atom positions from fingertip landmarks; create new atoms as needed.
-    for (let h = 0; h < 2; h++) {
+    // Map finger slots by handedness to keep IDs stable even if MediaPipe hand order flips.
+    for (let h = 0; h < hands.length; h++) {
       const hand = hands[h];
       if (!hand) continue;
+      const handBaseIndex = hand.handedness === 'Left' ? 0 : 5;
       for (let f = 0; f < 5; f++) {
-        const fingerIndex = h * 5 + f;
+        const fingerIndex = handBaseIndex + f;
         const lm = hand.landmarks[FINGERTIP_IDS[f]];
         if (!lm) continue;
         const pos = landmarkToWorld(lm);
