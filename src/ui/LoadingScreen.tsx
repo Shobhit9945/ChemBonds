@@ -1,9 +1,23 @@
 import { motion } from 'framer-motion';
 import { Camera, FlaskConical } from 'lucide-react';
+import * as Tone from 'tone';
 
 interface Props {
   status: 'idle' | 'requesting' | 'tracking' | 'denied' | 'error';
   onStart: () => void;
+}
+
+/**
+ * Unlock the Web Audio context. Must run inside a user-gesture handler
+ * (click/keydown), otherwise browsers refuse to start the AudioContext and
+ * every later Tone.js play() is silent.
+ */
+async function unlockAudio() {
+  try {
+    await Tone.start();
+  } catch {
+    // Non-fatal — audio will just stay silent.
+  }
 }
 
 export function LoadingScreen({ status, onStart }: Props) {
@@ -35,7 +49,10 @@ export function LoadingScreen({ status, onStart }: Props) {
 
         {status !== 'denied' && (
           <button
-            onClick={onStart}
+            onClick={async () => {
+              await unlockAudio();
+              onStart();
+            }}
             disabled={status === 'requesting'}
             className="px-5 py-2.5 rounded-md bg-accent text-bg font-medium inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent/90 transition-colors"
           >

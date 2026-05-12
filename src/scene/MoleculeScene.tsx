@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
@@ -40,15 +39,38 @@ function MoleculeEngine({ handsRef }: Props) {
     const frame = frameRef.current;
     const hands = handsRef.current;
     const { molecule, fingerElements, bumpRevision } = moleculeStore();
-    const { bondThreshold, enforceValence } = settingsStore();
+    const { bondThreshold, enforceValence, activeFingers } = settingsStore();
+
+    // 0) Drop dangling refs whose atoms were removed externally (e.g. via reset()).
+    //    Without this, R key bricks the scene — the engine thinks atoms still exist
+    //    in their slots and never recreates them.
+    let droppedAny = false;
+    for (let i = 0; i < 10; i++) {
+      const atom = fingerAtomsRef.current[i];
+      if (atom && !molecule.atoms.has(atom.id)) {
+        fingerAtomsRef.current[i] = null;
+        droppedAny = true;
+      }
+    }
+    if (droppedAny) proximityDwellRef.current.clear();
 
     // 1) Update atom positions from fingertip landmarks; create new atoms as needed.
-    // Map finger slots by handedness to keep IDs stable even if MediaPipe hand order flips.
+    //    Map finger slots by handedness, with collision fallback for the case where
+    //    MediaPipe momentarily labels both hands the same.
+    const claimedBases = new Set<number>();
     for (let h = 0; h < hands.length; h++) {
       const hand = hands[h];
       if (!hand) continue;
-      const handBaseIndex = hand.handedness === 'Left' ? 0 : 5;
+      let handBaseIndex = hand.handedness === 'Left' ? 0 : 5;
+      if (claimedBases.has(handBaseIndex)) {
+        // Collision — try the opposite slot. If that's also claimed, skip this hand.
+        handBaseIndex = handBaseIndex === 0 ? 5 : 0;
+        if (claimedBases.has(handBaseIndex)) continue;
+      }
+      claimedBases.add(handBaseIndex);
+
       for (let f = 0; f < 5; f++) {
+        if (!activeFingers[f]) continue; // user disabled this finger
         const fingerIndex = handBaseIndex + f;
         const lm = hand.landmarks[FINGERTIP_IDS[f]];
         if (!lm) continue;

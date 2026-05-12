@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import { Atom } from '../chemistry/Atom';
 
@@ -10,17 +11,23 @@ interface Props {
   showLabel: boolean;
 }
 
+/**
+ * Renders a single atom. The atom's `position` Vector3 is mutated in place by
+ * the engine's `useFrame` (in MoleculeScene). We sync the rendered group ref
+ * to that vector each frame so the atom follows the user's fingertip without
+ * triggering React re-renders.
+ */
 export function AtomMesh({ atom, isInspected, isGhost, showLabel }: Props) {
-  const ref = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const haloRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
 
-  // Position updates happen via a parent <group ref> in MoleculeScene's useFrame.
-  // For simplicity here we let the parent set position via prop on each render of this comp
-  // when triggered by the store revision. Per-frame movement is handled in MoleculeScene.
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.position.copy(atom.position);
+    }
+  });
 
   return (
-    <group position={atom.position.toArray()} ref={ref as any}>
+    <group ref={groupRef}>
       <mesh castShadow>
         <sphereGeometry args={[atom.radius * 1.4, 24, 24]} />
         <meshStandardMaterial
@@ -35,14 +42,14 @@ export function AtomMesh({ atom, isInspected, isGhost, showLabel }: Props) {
       </mesh>
 
       {atom.isFull && (
-        <mesh ref={ringRef}>
+        <mesh>
           <torusGeometry args={[atom.radius * 1.8, 0.015, 8, 32]} />
           <meshBasicMaterial color="#F85149" />
         </mesh>
       )}
 
       {isInspected && (
-        <mesh ref={haloRef}>
+        <mesh>
           <sphereGeometry args={[atom.radius * 1.9, 24, 24]} />
           <meshBasicMaterial color="#58A6FF" transparent opacity={0.18} />
         </mesh>
