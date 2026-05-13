@@ -79,6 +79,19 @@ function MoleculeEngine({ handsRef }: Props) {
         let atom = fingerAtomsRef.current[fingerIndex];
         const desiredElement = fingerElements[fingerIndex];
 
+        // If the user changed this finger's element, destroy the old atom (and
+        // any bonds it carried) so a fresh atom of the new element takes its place.
+        // Otherwise the old atom would linger on screen with the previous element.
+        if (atom && atom.element !== desiredElement) {
+          for (const key of [...proximityDwellRef.current.keys()]) {
+            if (key.includes(atom.id)) proximityDwellRef.current.delete(key);
+          }
+          molecule.removeAtom(atom.id);
+          fingerAtomsRef.current[fingerIndex] = null;
+          atom = null;
+          bumpRevision();
+        }
+
         if (!atom) {
           atom = new Atom(desiredElement, fingerIndex, pos);
           molecule.addAtom(atom);
@@ -86,11 +99,6 @@ function MoleculeEngine({ handsRef }: Props) {
           bumpRevision();
           play('atomSpawn');
         } else {
-          // Hot-swap element if user changed assignment while this finger has no bonds
-          if (atom.element !== desiredElement && atom.bonds.length === 0) {
-            atom.element = desiredElement;
-            bumpRevision();
-          }
           atom.position.copy(pos);
           atom.isGhost = false;
         }
@@ -99,6 +107,10 @@ function MoleculeEngine({ handsRef }: Props) {
     }
 
     // 2) Ghost / cull atoms whose fingertip hasn't been seen recently.
+    //    Atoms always disappear after GHOST_FRAMES — bonded or not. Previously
+    //    bonded atoms were preserved indefinitely, which caused stuck clusters
+    //    to pile up. Use the Reset button (or R key) to clear, or rebuild on
+    //    the next hand-up. (Save snapshots if you want to preserve a molecule.)
     for (let i = 0; i < 10; i++) {
       const atom = fingerAtomsRef.current[i];
       if (!atom) continue;
@@ -107,16 +119,12 @@ function MoleculeEngine({ handsRef }: Props) {
       if (gap > 0 && gap <= GHOST_FRAMES) {
         atom.isGhost = true;
       } else if (gap > GHOST_FRAMES) {
-        // remove the atom and any bonds attached to it
-        if (atom.bonds.length > 0) {
-          // keep bonded atoms alive — they may belong to a built molecule
-          // and shouldn't disappear just because the user moved their hand
-          atom.isGhost = true;
-        } else {
-          molecule.removeAtom(atom.id);
-          fingerAtomsRef.current[i] = null;
-          bumpRevision();
+        for (const key of [...proximityDwellRef.current.keys()]) {
+          if (key.includes(atom.id)) proximityDwellRef.current.delete(key);
         }
+        molecule.removeAtom(atom.id); // cascades to remove this atom's bonds
+        fingerAtomsRef.current[i] = null;
+        bumpRevision();
       }
     }
 

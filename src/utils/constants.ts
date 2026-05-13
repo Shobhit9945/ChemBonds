@@ -17,7 +17,7 @@ export const TRIPLE_BOND_DWELL_MS = 3000;
 // Tracking
 export const LANDMARK_SMOOTHING = 0.7; // EMA: prev * α + current * (1-α) -- we use 0.7 for prev
 export const LANDMARK_DEADZONE = 0.005;
-export const GHOST_FRAMES = 15;
+export const GHOST_FRAMES = 45; // ~0.75s at 60fps — brief grace period for occlusion / clicking UI
 
 // Fingertip landmark IDs
 export const FINGERTIP_IDS = [4, 8, 12, 16, 20] as const;
